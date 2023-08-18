@@ -50,6 +50,11 @@ class Window:
         curses.curs_set(1)  # Turn cursor back on
         self.screen.keypad(0) # Turn off keypad keys
 
+    def screen_center(self):
+        centerx = self.get_screen_dimensions()[0] // 2
+        centery = self.get_screen_dimensions()[1] // 2
+        return (centerx, centery)
+
 
 class GameWindow(Window):
     def __init__(self) -> None:
@@ -108,9 +113,9 @@ class GameWindow(Window):
         self.draw_game_over() # TODO: replace with a proper game over screen
         curses.napms(2000)
 
+
     def map_left_top_corner(self) -> tuple:
-        centerx = self.get_screen_dimensions()[0] // 2
-        centery = self.get_screen_dimensions()[1] // 2
+        centerx,  centery= self.screen_center()
         mapx = self.map_real_dimensions[0] // 2
         mapy = self.map_real_dimensions[1] // 2
         return (centerx - mapx, centery - mapy)
@@ -145,21 +150,93 @@ class GameWindow(Window):
         
 class Menu(Window):
     def __init__(self) -> None:
-        super().__init__(),
+        super().__init__()
+        self.set_item_action_bindings()
+        self.title = "PLACEHOLDER"
+        self.displayed_item = 0
+
+    def main_loop(self):
+        while True:
+            self.command = None
+            self.display_menu()
+            self.get_user_input()
+            if self.command in ["up", "down"]:
+                self.change_displayed_item(self.command)
+            if self.command == "select":
+                self.execute_item()
+
+    def execute_item(self):
+        self.menu_items[self.displayed_item]["action"]()        
+
+    def change_displayed_item(self, command: str):
+        limits = range(0, len(self.menu_items))
+        change = {
+            "up": -1,
+            "down": 1
+        }
+        newvalue = self.displayed_item + change[command]
+        if newvalue in limits:
+            self.displayed_item = newvalue              
+    
+
+    def colors(self) -> tuple:
+        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK) # Default Color
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE) # Selected Color
+        # BUG: After returning from the game, color scheme gets stuck
+            # TODO: Make a decorator, 
+
 
     def set_item_action_bindings(self):
-        self.menu_items = {
-
-        }
+        self.menu_items = {}
     
+    @frame
+    def display_menu(self):
+        cx, cy = self.screen_center()
+        
+        title_coord = (cx - len(self.title) // 2, 1)
+        self.screen.addstr(title_coord[1], title_coord[0], self.title)
+        x = cx - 10
+        y = title_coord[1] + 2
+        for iter, item in enumerate(self.menu_items.values()):
+            if iter == self.displayed_item:
+                color = 1
+            else:
+                color = 2
+            self.screen.addstr(y, x, f"{iter+1}. {item['display']}", curses.color_pair(color))
+            y += 1
+
+            
+    def dud_function(self):
+        """Has no purpose"""
+        pass
+
     def set_keybindings(self):
         self.keys = {
             curses.KEY_UP: "up", 
             curses.KEY_DOWN: "down",
-            curses.KEY_ENTER: "select"
+            curses.KEY_RIGHT: "select"
         }
 
+class MainMenu(Menu):
+    def __init__(self) -> None:
+        super().__init__()
+        self.title = "MAIN MENU"
+
+    def start_app(self):
+        while True:
+            pass
+
+    def set_item_action_bindings(self):
+        self.menu_items = {
+            0: {"display": "New Game", "action": self.new_game},
+            1: {"display": "TODO", "action": self.dud_function}
+        }
+    
+    def new_game(self):
+        app = GameWindow()
+        app.new_game()
+        app.game_loop()
+
 if __name__ == "__main__":
-    app = GameWindow()
-    app.new_game()
-    app.game_loop()
+    menu = MainMenu()
+    menu.main_loop()
