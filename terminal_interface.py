@@ -24,7 +24,8 @@ class Window:
         }
 
     def get_screen_dimensions(self) -> tuple:
-        return (curses.LINES, curses.COLS)
+        y, x =  self.screen.getmaxyx()
+        return (x, y)
 
     def screen_config(self):
         self.screen.keypad(1) # Allows arrow keys
@@ -46,7 +47,7 @@ class Window:
 class GameWindow(Window):
     def __init__(self) -> None:
         super().__init__()
-        self.new_game()
+        # self.new_game()
         common_snake_body_symbol = "0"
         self.symbols = {
             "empty": ".",
@@ -59,8 +60,10 @@ class GameWindow(Window):
         }
         self.score = 0
 
-    def new_game(self):        
-        self.game = SnakeGame.GameLogic()
+    def new_game(self, map_dimensions: tuple=(21, 21)):
+        self.map_matrix_dimensions = map_dimensions
+        self.map_real_dimensions = (map_dimensions[0]*2 - 1, map_dimensions[1])        
+        self.game = SnakeGame.GameLogic(map_dimensions)
 
     def set_keybindings(self):
         self.keys = {
@@ -71,6 +74,7 @@ class GameWindow(Window):
         }
 
     def print_map(self):
+        """Old method, prints the map without curses"""
         [print(" ".join(row)) for row in self.symbolmap]     
 
     def analyse_state(self, state: dict):
@@ -97,14 +101,30 @@ class GameWindow(Window):
         self.draw_game_over() # TODO: replace with a proper game over screen
         curses.napms(2000)
 
+    def map_left_top_corner(self) -> tuple:
+        centerx = self.get_screen_dimensions()[0] // 2
+        centery = self.get_screen_dimensions()[1] // 2
+        mapx = self.map_real_dimensions[0] // 2
+        mapy = self.map_real_dimensions[1] // 2
+        return (centerx - mapx, centery - mapy)
+    
+    def map_borders(self) -> tuple:
+        """returns (x1, x2, y1, y2)"""
+        x1, y1 = self.map_left_top_corner()
+        return (x1, x1 + self.map_real_dimensions[0], y1, y1 + self.map_real_dimensions[1]) 
+    
+
     @frame
     def draw_map(self):
-        latest_y = 0
+        # self.screen.box() # to test the borders of the screen
+        addx, addy = self.map_left_top_corner() # To center the map
         for y, row in enumerate(self.symbolmap):
             for x, char in enumerate(row):
-                self.screen.addch(y, x*2, char) # x*2 so that x axis isn't crowded
-            latest_y = y
-        self.screen.addstr(latest_y+1, 0, f"score: {self.score}")
+                self.screen.addch(addy + y,addx + x*2, char) # x*2 so that x axis isn't crowded
+                latest_x = addx + x*2
+
+        scoretext = f"score: {self.score}"
+        self.screen.addstr(self.map_borders()[2]-1, addx, f"{scoretext:>{self.map_real_dimensions[0]}}")
 
     @frame
     def draw_game_over(self):
@@ -129,4 +149,5 @@ class Menu(Window):
 
 if __name__ == "__main__":
     app = GameWindow()
+    app.new_game()
     app.game_loop()
