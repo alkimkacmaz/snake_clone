@@ -17,6 +17,7 @@ class Window:
         self.screen = curses.initscr()
         self.screen_config()
         self.dim = self.get_screen_dimensions()
+        self.colors()
 
     def set_keybindings(self):
         self.keys = {
@@ -26,11 +27,17 @@ class Window:
     def get_screen_dimensions(self) -> tuple:
         y, x =  self.screen.getmaxyx()
         return (x, y)
+    
+    def colors(self) -> tuple:
+        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
 
     def screen_config(self):
         self.screen.keypad(1) # Allows arrow keys
         self.screen.nodelay(1) # No delay when asking for input
         curses.curs_set(0) # No cursor
+        curses.start_color()
 
     def get_user_input(self):
         input = self.screen.getch()
@@ -120,7 +127,12 @@ class GameWindow(Window):
         addx, addy = self.map_left_top_corner() # To center the map
         for y, row in enumerate(self.symbolmap):
             for x, char in enumerate(row):
-                self.screen.addch(addy + y,addx + x*2, char) # x*2 so that x axis isn't crowded
+                if char in [self.symbols[i] for i in ["snakehead", "snakebody", "snakeneck", "snaketailtip"]]:
+                    self.screen.addch(addy + y,addx + x*2, char) #, curses.color_pair(1))
+                elif char in [self.symbols[i] for i in ["food"]]:
+                    self.screen.addch(addy + y,addx + x*2, char, curses.color_pair(2))
+                else:
+                    self.screen.addch(addy + y,addx + x*2, char, curses.A_DIM) # x*2 so that x axis isn't crowded
                 latest_x = addx + x*2
 
         scoretext = f"score: {self.score}"
