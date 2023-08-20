@@ -214,7 +214,7 @@ class Menu(Window):
         self.keys = {
             curses.KEY_UP: "up", 
             curses.KEY_DOWN: "down",
-            curses.KEY_RIGHT: "select"
+            10: "select" # 10 is newline, so ENTER
         }
 
 class MainMenu(Menu):
